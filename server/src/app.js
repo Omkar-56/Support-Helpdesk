@@ -4,6 +4,7 @@ import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { authRouter } from './routes/auth.routes.js';
+import { ticketRouter } from './routes/ticket.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,8 +29,9 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Auth endpoints
+// App routers
 app.use('/api/auth', authRouter);
+app.use('/api/tickets', ticketRouter);
 
 // Generic 404 handler for API routes
 app.use((req, res, next) => {
