@@ -3,6 +3,7 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { authRouter } from './routes/auth.routes.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,11 +23,15 @@ app.use(cookieParser());
 // Serve uploaded attachments statically
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
+// Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Generic 404 handler
+// Auth endpoints
+app.use('/api/auth', authRouter);
+
+// Generic 404 handler for API routes
 app.use((req, res, next) => {
   if (req.path.startsWith('/api')) {
     return res.status(404).json({ error: 'Endpoint not found' });
@@ -36,7 +41,6 @@ app.use((req, res, next) => {
 
 // Global error handler
 app.use((err, req, res, next) => {
-  console.error('Unhandled server error:', err);
   const status = err.status || 500;
   res.status(status).json({
     error: err.message || 'Internal server error',
