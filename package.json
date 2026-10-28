@@ -1,0 +1,12 @@
+{
+  "name": "support-helpdesk",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "setup-db": "npm --prefix server run setup-db",
+    "seed": "npm --prefix server run seed",
+    "test": "npm --prefix server test",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev"
+  }
+}
