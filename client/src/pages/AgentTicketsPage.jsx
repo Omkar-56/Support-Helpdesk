@@ -27,7 +27,7 @@ export function AgentTicketsPage({ onSelectTicket }) {
   }, [statusFilter]);
 
   const filterTabs = [
-    { label: 'All Tickets', value: '' },
+    { label: 'My Assigned Tickets', value: '' },
     { label: 'Open', value: 'open' },
     { label: 'In Progress', value: 'in_progress' },
     { label: 'Resolved', value: 'resolved' },
@@ -39,14 +39,14 @@ export function AgentTicketsPage({ onSelectTicket }) {
       {/* Header */}
       <div className="sm:flex sm:items-center sm:justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Agent Helpdesk Queue</h1>
+          <h1 className="text-2xl font-bold text-slate-900">My Assigned Tickets</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Monitor incoming customer requests, respond within SLA, and utilize AI draft replies.
+            Tickets assigned directly to you via round-robin routing. Respond within the 4-hour SLA.
           </p>
         </div>
         <div className="mt-4 sm:mt-0 flex items-center space-x-2 text-xs text-slate-500">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-          <span>Round-Robin Active</span>
+          <span>Assigned Queue</span>
         </div>
       </div>
 
@@ -71,7 +71,7 @@ export function AgentTicketsPage({ onSelectTicket }) {
       {loading ? (
         <div className="py-16 text-center text-slate-500">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent mb-3" />
-          <p>Loading ticket queue...</p>
+          <p>Loading your assigned tickets...</p>
         </div>
       ) : error ? (
         <div className="p-4 rounded-lg bg-rose-50 border border-rose-200 text-rose-700">
@@ -85,9 +85,9 @@ export function AgentTicketsPage({ onSelectTicket }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h3 className="text-base font-semibold text-slate-900">Queue is clear</h3>
+            <h3 className="text-base font-semibold text-slate-900">No tickets assigned</h3>
             <p className="mt-1 text-sm text-slate-500 max-w-sm mx-auto">
-              No tickets found matching the selected filter.
+              You currently have no tickets assigned matching this filter.
             </p>
           </CardBody>
         </Card>
@@ -127,7 +127,7 @@ export function AgentTicketsPage({ onSelectTicket }) {
                     </span>
                     <span>•</span>
                     <span>
-                      Assigned: {ticket.agent_name ? ticket.agent_name : 'Unassigned'}
+                      Assigned to: You ({ticket.agent_name})
                     </span>
                     <span>•</span>
                     <span>

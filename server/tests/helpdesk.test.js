@@ -183,7 +183,7 @@ describe('Support Helpdesk MVP Test Suite', () => {
       const cRes = await request.post('/api/auth/register').send({ name: 'Cust Clara', email: 'clara@test.com', password: 'password123', role: 'customer' });
       const custCookie = cRes.headers['set-cookie'];
 
-      // Customer creates ticket
+      // Customer creates ticket (assigned to Agent Sam)
       const tRes = await request.post('/api/tickets').set('Cookie', custCookie).send({
         subject: 'Overdue SLA Test',
         description: 'Testing overdue first response SLA calculation',
@@ -230,8 +230,8 @@ describe('Support Helpdesk MVP Test Suite', () => {
     });
   });
 
-  // 5. Customers never receive internal notes & never receive ai_* fields
-  describe('5. Customers never receive internal notes or ai_* fields', () => {
+  // 5. Customers never receive internal notes & never receive ai_* fields; Agents see only assigned tickets
+  describe('5. Role isolation, notes confidentiality, and agent assignment scoping', () => {
     beforeEach(async () => {
       await resetDb();
     });
@@ -284,6 +284,50 @@ describe('Support Helpdesk MVP Test Suite', () => {
       // Agent fetches messages -> agent sees BOTH (2 messages)
       const agentMessages = await request.get(`/api/tickets/${ticketId}/messages`).set('Cookie', agentCookie);
       expect(agentMessages.body.messages.length).toBe(2);
+    });
+
+    it('restricts agents to seeing only tickets assigned to them', async () => {
+      // Register Agent 1 and Agent 2
+      const a1Res = await request.post('/api/auth/register').send({ name: 'Agent One', email: 'agentone@test.com', password: 'password123', role: 'agent' });
+      const a2Res = await request.post('/api/auth/register').send({ name: 'Agent Two', email: 'agenttwo@test.com', password: 'password123', role: 'agent' });
+
+      const agent1Cookie = a1Res.headers['set-cookie'];
+      const agent2Cookie = a2Res.headers['set-cookie'];
+
+      const cRes = await request.post('/api/auth/register').send({ name: 'Customer C', email: 'cust_c@test.com', password: 'password123', role: 'customer' });
+      const custCookie = cRes.headers['set-cookie'];
+
+      // Ticket 1 assigned to Agent One
+      const t1Res = await request.post('/api/tickets').set('Cookie', custCookie).send({
+        subject: 'Ticket for Agent One',
+        description: 'Assigned to Agent One via round-robin',
+      });
+      const t1Id = t1Res.body.ticket.id;
+
+      // Ticket 2 assigned to Agent Two
+      const t2Res = await request.post('/api/tickets').set('Cookie', custCookie).send({
+        subject: 'Ticket for Agent Two',
+        description: 'Assigned to Agent Two via round-robin',
+      });
+      const t2Id = t2Res.body.ticket.id;
+
+      // Agent 1 lists tickets -> sees only Ticket 1
+      const a1List = await request.get('/api/tickets').set('Cookie', agent1Cookie);
+      expect(a1List.body.tickets.length).toBe(1);
+      expect(a1List.body.tickets[0].id).toBe(t1Id);
+
+      // Agent 2 lists tickets -> sees only Ticket 2
+      const a2List = await request.get('/api/tickets').set('Cookie', agent2Cookie);
+      expect(a2List.body.tickets.length).toBe(1);
+      expect(a2List.body.tickets[0].id).toBe(t2Id);
+
+      // Agent 1 tries to access Ticket 2 -> receives 404
+      const a1AccessT2 = await request.get(`/api/tickets/${t2Id}`).set('Cookie', agent1Cookie);
+      expect(a1AccessT2.status).toBe(404);
+
+      // Agent 2 tries to access Ticket 1 -> receives 404
+      const a2AccessT1 = await request.get(`/api/tickets/${t1Id}`).set('Cookie', agent2Cookie);
+      expect(a2AccessT1.status).toBe(404);
     });
   });
 

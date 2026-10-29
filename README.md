@@ -23,11 +23,11 @@ Pre-seeded credentials ready to test:
 
 | Role | Email | Password | Details |
 | :--- | :--- | :--- | :--- |
-| **Customer** | `customer@demo.com` | `password123` | Has 3 existing tickets (active, overdue, and in-progress) |
+| **Customer** | `customer@demo.com` | `password123` | Has 3 tickets (active, overdue, and in-progress) |
 | **Customer** | `david@demo.com` | `password123` | Has 1 resolved ticket |
-| **Agent 1** | `agent1@demo.com` | `password123` | Sarah Connor |
-| **Agent 2** | `agent2@demo.com` | `password123` | John Doe |
-| **Agent 3** | `agent3@demo.com` | `password123` | Elena Rostova |
+| **Agent 1** | `agent1@demo.com` | `password123` | Sarah Connor (Assigned: Ticket #1, Ticket #4) |
+| **Agent 2** | `agent2@demo.com` | `password123` | John Doe (Assigned: Ticket #2 - Overdue SLA) |
+| **Agent 3** | `agent3@demo.com` | `password123` | Elena Rostova (Assigned: Ticket #3 - In Progress) |
 
 > **Tip**: The login page also includes 1-click **Quick Demo Presets** to quickly populate credentials.
 
@@ -67,7 +67,7 @@ npm run seed
 ```
 
 ### 4. Run Automated Backend Tests
-Run the test suite covering all 6 test scenarios:
+Run the test suite covering all test scenarios:
 ```bash
 npm test
 ```
@@ -146,10 +146,11 @@ All tables are defined in plain SQL in `server/src/db/schema.sql` (no migrations
    - The singleton row `assignment_state WHERE id = 1` is locked using `SELECT last_assigned_agent_id FROM assignment_state WHERE id = 1 FOR UPDATE`.
    - Concurrent ticket submissions wait for the lock sequentially, eliminating race conditions and ensuring perfectly distributed loads (`[1, 2, 3, 1, 2, 3]`).
 
-2. **Strict SQL-Level Data Confidentiality (Internal Notes & AI Fields)**:
-   - Rather than relying on UI-level hiding, customer queries strictly enforce `AND m.is_internal = FALSE` directly in SQL.
-   - Customers never receive `ai_*` fields (`ai_category`, `ai_draft_reply`, `ai_status`) in ticket responses or message responses.
-   - Customer endpoint queries include an ownership condition (`WHERE customer_id = $1`) so cross-tenant ticket inspection returns a 404.
+2. **Strict SQL-Level Data Confidentiality & Scoping**:
+   - **Agent Isolation**: Agents can see and access only the tickets assigned directly to them (`WHERE t.assigned_agent_id = $1`). Accessing tickets belonging to another agent returns a 404.
+   - **Internal Notes**: Customer queries strictly enforce `AND m.is_internal = FALSE` directly in SQL. Internal notes never leak to customers.
+   - **AI Field Privacy**: Customers never receive `ai_*` fields (`ai_category`, `ai_draft_reply`, `ai_status`) in ticket responses or message responses.
+   - **Customer Isolation**: Customer endpoint queries include an ownership condition (`WHERE customer_id = $1`) so cross-tenant ticket inspection returns a 404.
 
 3. **SLA Overdue Logic**:
    - `first_response_due_at` is set to `created_at + 4 hours`.
@@ -181,7 +182,7 @@ All tables are defined in plain SQL in `server/src/db/schema.sql` (no migrations
 
 ## Test Verification
 
-The test suite in `server/tests/helpdesk.test.js` covers 8 test cases across the required criteria:
+The test suite in `server/tests/helpdesk.test.js` covers 9 test cases across all core criteria:
 
 ```bash
 npm test
@@ -190,7 +191,7 @@ npm test
 - **Round-Robin Order**: Assigns sequential tickets across agents with wrap-around.
 - **Concurrent Creates Under Load**: Validates `SELECT ... FOR UPDATE` distributes 9 simultaneous tickets evenly.
 - **SLA Overdue Logic**: Verifies overdue badge triggers after deadline, internal notes do not clear SLA, and public replies fulfill SLA.
-- **Confidentiality**: Verifies customers cannot view internal notes or `ai_*` attributes.
+- **Confidentiality & Agent Scoping**: Verifies customers cannot view internal notes or `ai_*` attributes, and agents can only view tickets assigned to them.
 - **AI Resilience**: Ticket creation still responds with HTTP 201 when the AI API fails.
 - **Zod Validation**: Malformed payload rejection with field-specific errors.
 
@@ -200,8 +201,9 @@ npm test
 
 ### What is Finished:
 - Full customer workflow: registration/login, ticket creation with image/PDF attachments (Multer 5MB limit), ticket status tracking, response SLA countdown, public conversation thread.
-- Full agent workflow: queue overview, customer details, SLA countdown & overdue warnings, AI draft & category suggestions, editable draft composer, public reply vs internal note toggle, status update controls.
+- Full agent workflow: viewing assigned tickets, customer details, SLA countdown & overdue warnings, AI draft & category suggestions, editable draft composer, public reply vs internal note toggle, status update controls.
 - Safe round-robin agent assignment with database transaction locking.
+- Agent assignment isolation (agents only see tickets assigned to them).
 - Background AI integration with Gemini free-tier REST endpoint and 8-second timeout.
 - 100% automated test coverage for backend logic with Vitest + Supertest.
 - Automated seed script with demo tickets showcasing all states.
@@ -211,6 +213,7 @@ npm test
 2. **Email Notifications**: Dispatch transactional email notifications to customers on agent public replies.
 3. **Advanced SLA Business Hours**: Calculate SLA based on business operating hours (e.g. 9 AM - 5 PM weekdays) rather than raw wall-clock time.
 4. **Cloud Object Storage**: Transition from local disk storage (`uploads/`) to S3 / Google Cloud Storage with pre-signed URLs.
+5. **Cross-Agent Ticket Visibility & Coverage Reassignment**: Allow agents to view tickets assigned to other teammates and implement an out-of-office / reassignment workflow so that if one agent is unavailable or on leave, another agent can step in and handle their tickets.
 
 ---
 

@@ -82,7 +82,9 @@ export class TicketService {
   }
 
   /**
-   * Retrieves list of tickets filtered by user role and ownership.
+   * Retrieves list of tickets filtered by user role and ownership:
+   * - Customers see only tickets they created (customer_id = user.id)
+   * - Agents see only tickets assigned to them (assigned_agent_id = user.id)
    */
   static async getTickets({ user, status = null }) {
     const isCustomer = user.role === 'customer';
@@ -132,6 +134,10 @@ export class TicketService {
     if (isCustomer) {
       params.push(user.id);
       conditions.push(`t.customer_id = $${params.length}`);
+    } else {
+      // Agents only see tickets assigned to them
+      params.push(user.id);
+      conditions.push(`t.assigned_agent_id = $${params.length}`);
     }
 
     if (status) {
@@ -150,7 +156,10 @@ export class TicketService {
   }
 
   /**
-   * Retrieves a single ticket by ID, enforcing role/ownership and sanitizing AI fields for customers.
+   * Retrieves a single ticket by ID, enforcing role/ownership:
+   * - Customers can only access their own tickets
+   * - Agents can only access tickets assigned to them
+   * - ai_* fields sanitized for customers
    */
   static async getTicketById({ ticketId, user }) {
     const isCustomer = user.role === 'customer';
@@ -197,6 +206,10 @@ export class TicketService {
     if (isCustomer) {
       sql += ' AND t.customer_id = $2';
       params.push(user.id);
+    } else {
+      // Agents can only access tickets assigned to them
+      sql += ' AND t.assigned_agent_id = $2';
+      params.push(user.id);
     }
 
     const result = await query(sql, params);
@@ -214,7 +227,6 @@ export class TicketService {
    * Updates ticket status (e.g. open -> in_progress -> resolved -> closed).
    */
   static async updateStatus({ ticketId, status, user }) {
-    // Agents can update any ticket, customers can close their own tickets
     const ticket = await this.getTicketById({ ticketId, user });
 
     const result = await query(

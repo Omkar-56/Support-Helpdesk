@@ -94,10 +94,10 @@ export function AgentTicketDetailPage({ ticketId, onBack }) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-8">
         <Button variant="secondary" size="sm" onClick={onBack} className="mb-4">
-          ← Back to Queue
+          ← Back to My Tickets
         </Button>
         <div className="p-4 rounded-lg bg-rose-50 border border-rose-200 text-rose-700">
-          {error || 'Ticket not found'}
+          {error || 'Ticket not found or not assigned to you'}
         </div>
       </div>
     );
@@ -108,7 +108,7 @@ export function AgentTicketDetailPage({ ticketId, onBack }) {
       {/* Top Header Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <Button variant="secondary" size="sm" onClick={onBack}>
-          ← Back to Queue
+          ← Back to My Tickets
         </Button>
 
         <div className="flex flex-wrap items-center gap-3">
