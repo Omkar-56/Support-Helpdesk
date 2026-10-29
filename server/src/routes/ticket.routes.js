@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { TicketService } from '../services/ticket.service.js';
 import { MessageService } from '../services/message.service.js';
+import { AiService } from '../services/ai.service.js';
 import { createTicketSchema, updateTicketStatusSchema } from '../schemas/ticket.schema.js';
 import { createMessageSchema } from '../schemas/message.schema.js';
 import { validateBody } from '../middleware/validate.middleware.js';
@@ -28,6 +29,9 @@ ticketRouter.post(
         attachmentUrl,
         attachmentName,
       });
+
+      // Call Gemini in the background (never blocks ticket creation)
+      AiService.processTicketInBackground(ticket.id, ticket.subject, ticket.description);
 
       // Customers must never receive ai_* fields
       const { ai_category, ai_draft_reply, ai_status, ...safeTicket } = ticket;
